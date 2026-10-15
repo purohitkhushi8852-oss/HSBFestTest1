@@ -114,6 +114,15 @@ const submitBtnText = document.getElementById("submit-btn-text");
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Instant render fallback events so there is zero delay or blank state
+  try {
+    const initial = getLocalEvents();
+    cachedEvents = initial;
+    renderEvents(initial);
+  } catch (e) {
+    console.warn("Initial render error:", e);
+  }
+
   fetchEvents();
   setupEventListeners();
 });
