@@ -1,0 +1,6 @@
+$kind: http-request
+name: GET /api/stats — Live Fest Analytics
+description: "Returns live computed statistics: total_events, total_registrations, total_capacity, overall_utilization_pct, upcoming_events_count, and events_by_category."
+url: "{{baseUrl}}/api/stats"
+method: GET
+order: 1000

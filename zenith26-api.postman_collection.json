@@ -1,0 +1,277 @@
+{
+  "info": {
+    "_postman_id": "c1f7926b-4b2a-43cf-a0e2-zenith2026api",
+    "name": "Zenith '26 College Fest Management System API",
+    "description": "Postman API test suite for Zenith '26 College Fest Management System (PM2-01 & PM2-02). Covers all REST endpoints, query filters, server-side validation error codes, and stretch goals.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "GET /api/events — List All Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Returns list of all fest events with live computed available_seats."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/events — Filter by Category & Search Query",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events?category=Technical&search=Code",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Technical",
+                  "description": "Filter events by category (e.g. Technical, Cultural, Sports, Gaming, Workshop)"
+                },
+                {
+                  "key": "search",
+                  "value": "Code",
+                  "description": "Case-insensitive substring search on event title"
+                }
+              ]
+            },
+            "description": "Exercises server-side category filtering and search query matching."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/events/{event_id} — Get Single Event Detail (Success)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "1"]
+            },
+            "description": "Returns detailed event information including live computed available_seats for event id 1."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/events/{event_id} — Non-existent Event (Expect 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/9999",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "9999"]
+            },
+            "description": "Verifies 404 Not Found response when requesting a non-existent event ID."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/events — Add New Event (Stretch Goal)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Autonomous Drone Racing\",\n  \"category\": \"Technical\",\n  \"description\": \"FPV drone pilots navigate custom high-speed neon obstacles.\",\n  \"event_date\": \"2026-11-15\",\n  \"event_time\": \"03:30 PM\",\n  \"venue\": \"University Sports Complex\",\n  \"capacity\": 50,\n  \"fee\": 100,\n  \"icon\": \"🛸\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Stretch goal endpoint: Admin creates a new fest event with server-side validation."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Registrations",
+      "item": [
+        {
+          "name": "POST /api/events/{event_id}/register — Valid Registration (Expect 201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_name\": \"Rohan Mehta\",\n  \"roll_number\": \"2024BTECH015\",\n  \"email\": \"rohan.mehta@example.edu\",\n  \"phone\": \"+91 9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events/1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "1", "register"]
+            },
+            "description": "Successful registration for event id 1. Should return 201 Created with RegistrationOut."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/events/{event_id}/register — Missing Required Field (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_name\": \"\",\n  \"roll_number\": \"2024BTECH015\",\n  \"email\": \"missing.name@example.edu\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events/1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "1", "register"]
+            },
+            "description": "Tests server-side validation for missing student name. Expects 400 Bad Request."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/events/{event_id}/register — Invalid Email Format (Expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_name\": \"Ananya Sen\",\n  \"roll_number\": \"2024BTECH099\",\n  \"email\": \"invalid-email-without-at-symbol\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events/1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "1", "register"]
+            },
+            "description": "Tests server-side validation when email is missing '@'. Expects 400 Bad Request."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /api/events/{event_id}/register — Duplicate Registration (Expect 409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_name\": \"Rohan Mehta\",\n  \"roll_number\": \"2024BTECH015\",\n  \"email\": \"rohan.mehta@example.edu\",\n  \"phone\": \"+91 9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events/1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "1", "register"]
+            },
+            "description": "Tests unique constraint: registering the same email for the same event a second time returns 409 Conflict."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/registrations — List All Registrations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/registrations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registrations"]
+            },
+            "description": "Returns raw list of all student registrations, joined with event_title."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /api/registrations — Filter by Event ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/registrations?event_id=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registrations"],
+              "query": [
+                {
+                  "key": "event_id",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Returns registrations specifically for event ID 1."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /api/registrations/{registration_id} — Cancel Registration (Stretch Goal)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/registrations/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "registrations", "1"]
+            },
+            "description": "Stretch goal endpoint: Admin cancels a registration by ID, freeing up the seat immediately."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin & Stats",
+      "item": [
+        {
+          "name": "GET /api/stats — Live Fest Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stats"]
+            },
+            "description": "Returns live computed statistics: total_events, total_registrations, total_capacity, overall_utilization_pct, upcoming_events_count, and events_by_category."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

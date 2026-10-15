@@ -1,0 +1,6 @@
+$kind: http-request
+name: DELETE /api/registrations/{registration_id} — Cancel Registration (Stretch Goal)
+description: "Stretch goal endpoint: Admin cancels a registration by ID, freeing up the seat immediately."
+url: "{{baseUrl}}/api/registrations/1"
+method: DELETE
+order: 7000

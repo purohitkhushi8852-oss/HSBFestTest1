@@ -1,0 +1,6 @@
+$kind: http-request
+name: GET /api/events — List All Events
+description: Returns list of all fest events with live computed available_seats.
+url: "{{baseUrl}}/api/events"
+method: GET
+order: 1000

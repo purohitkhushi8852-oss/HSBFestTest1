@@ -1,0 +1,4 @@
+$kind: collection
+description: Postman API test suite for Zenith '26 College Fest Management System (PM2-01 & PM2-02). Covers all REST endpoints, query filters, server-side validation error codes, and stretch goals.
+variables:
+  baseUrl: http://localhost:8081

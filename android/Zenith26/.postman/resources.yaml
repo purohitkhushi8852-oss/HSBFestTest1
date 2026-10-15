@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 106cd37b-55ac-472d-8234-29fa978b1aa1
+
+cloudResources:
+  collections:
+    ../postman/collections/Zenith '26 College Fest Management System API: ddca8790-4b4a-4153-88a9-849a279cbef1
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

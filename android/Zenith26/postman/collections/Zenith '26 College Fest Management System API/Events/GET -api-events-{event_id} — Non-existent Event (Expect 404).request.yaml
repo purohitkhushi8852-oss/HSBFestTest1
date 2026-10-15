@@ -1,0 +1,6 @@
+$kind: http-request
+name: GET /api/events/{event_id} — Non-existent Event (Expect 404)
+description: Verifies 404 Not Found response when requesting a non-existent event ID.
+url: "{{baseUrl}}/api/events/9999"
+method: GET
+order: 4000

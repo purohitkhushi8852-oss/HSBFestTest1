@@ -1,0 +1,16 @@
+$kind: http-request
+name: POST /api/events/{event_id}/register — Missing Required Field (Expect 400)
+description: Tests server-side validation for missing student name. Expects 400 Bad Request.
+url: "{{baseUrl}}/api/events/1/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "student_name": "",
+      "roll_number": "2024BTECH015",
+      "email": "missing.name@example.edu"
+    }
+order: 2000

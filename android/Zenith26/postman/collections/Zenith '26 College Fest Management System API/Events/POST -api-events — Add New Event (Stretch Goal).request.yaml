@@ -1,0 +1,22 @@
+$kind: http-request
+name: POST /api/events — Add New Event (Stretch Goal)
+description: "Stretch goal endpoint: Admin creates a new fest event with server-side validation."
+url: "{{baseUrl}}/api/events"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "title": "Autonomous Drone Racing",
+      "category": "Technical",
+      "description": "FPV drone pilots navigate custom high-speed neon obstacles.",
+      "event_date": "2026-11-15",
+      "event_time": "03:30 PM",
+      "venue": "University Sports Complex",
+      "capacity": 50,
+      "fee": 100,
+      "icon": "🛸"
+    }
+order: 5000

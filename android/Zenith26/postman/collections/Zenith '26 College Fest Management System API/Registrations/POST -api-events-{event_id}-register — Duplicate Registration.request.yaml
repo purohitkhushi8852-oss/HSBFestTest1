@@ -1,0 +1,17 @@
+$kind: http-request
+name: POST /api/events/{event_id}/register — Duplicate Registration (Expect 409)
+description: "Tests unique constraint: registering the same email for the same event a second time returns 409 Conflict."
+url: "{{baseUrl}}/api/events/1/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "student_name": "Rohan Mehta",
+      "roll_number": "2024BTECH015",
+      "email": "rohan.mehta@example.edu",
+      "phone": "+91 9876543210"
+    }
+order: 4000

@@ -1,0 +1,17 @@
+$kind: http-request
+name: POST /api/events/{event_id}/register — Valid Registration (Expect 201)
+description: Successful registration for event id 1. Should return 201 Created with RegistrationOut.
+url: "{{baseUrl}}/api/events/1/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "student_name": "Rohan Mehta",
+      "roll_number": "2024BTECH015",
+      "email": "rohan.mehta@example.edu",
+      "phone": "+91 9876543210"
+    }
+order: 1000

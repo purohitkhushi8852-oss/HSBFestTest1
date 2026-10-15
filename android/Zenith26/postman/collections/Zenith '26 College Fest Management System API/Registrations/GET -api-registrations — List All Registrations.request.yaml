@@ -1,0 +1,6 @@
+$kind: http-request
+name: GET /api/registrations — List All Registrations
+description: Returns raw list of all student registrations, joined with event_title.
+url: "{{baseUrl}}/api/registrations"
+method: GET
+order: 5000

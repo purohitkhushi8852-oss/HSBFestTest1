@@ -1,0 +1,13 @@
+$kind: http-request
+name: GET /api/events — Filter by Category & Search Query
+description: Exercises server-side category filtering and search query matching.
+url: "{{baseUrl}}/api/events?category=Technical&search=Code"
+method: GET
+queryParams:
+  - key: category
+    value: Technical
+    description: Filter events by category (e.g. Technical, Cultural, Sports, Gaming, Workshop)
+  - key: search
+    value: Code
+    description: Case-insensitive substring search on event title
+order: 2000

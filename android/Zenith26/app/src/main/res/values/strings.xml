@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Zenith \'26</string>
+    <string name="app_full_title">Zenith \'26 College Fest Management System</string>
+    <string name="campus_subtitle">Campus Event Management System</string>
+    <string name="fest_dates">📅 November 14 – 15, 2026</string>
+    <string name="fest_venue">📍 JKLU Campus</string>
+    <string name="tagline_prefix">Ignite Your Spark at</string>
+    <string name="tagline_suffix">Zenith \'26</string>
+    <string name="hero_description">The premier college fest experience. Discover competitive hackathons, battle of the bands, robotics, e-sports, and creator workshops. Explore events and reserve your seats instantly.</string>
+</resources>

@@ -1,0 +1,6 @@
+$kind: http-request
+name: GET /api/events/{event_id} — Get Single Event Detail (Success)
+description: Returns detailed event information including live computed available_seats for event id 1.
+url: "{{baseUrl}}/api/events/1"
+method: GET
+order: 3000

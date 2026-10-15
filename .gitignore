@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+env/
+venv/
+ENV/
+*.db
+*.sqlite3
+
+# Android / Gradle
+.gradle/
+build/
+app/build/
+*.iml
+.idea/
+local.properties
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Explicitly keep APKs
+!Zenith26.apk
+!frontend/zenith26.apk
