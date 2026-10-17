@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +18,9 @@ from backend.models import (
     RegistrationItem,
     RegistrationOut,
     StatsOut,
+    TopicOut,
+    TopicCreate,
+    LectureNoteOut,
 )
 from backend.seed_data import seed_events
 
@@ -35,8 +39,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Zenith '26 College Fest Management System",
-    description="API for the Zenith '26 College Fest student portal and admin dashboard.",
+    title="Early Learn LMS",
+    description="Personal Knowledge-to-Learning Management System built from Obsidian vault.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -475,9 +479,12 @@ app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
 
 
 @app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+@app.get("/learn.html", include_in_schema=False)
+@app.get("/learn", include_in_schema=False)
 def serve_index():
-    """Serves the student event portal."""
-    return FileResponse(FRONTEND_DIR / "index.html")
+    """Serves the Early Learn LMS dashboard."""
+    return FileResponse(FRONTEND_DIR / "learn.html")
 
 
 @app.get("/admin.html", include_in_schema=False)
@@ -487,4 +494,460 @@ def serve_admin():
 
 
 # Fallback static mount for other potential static assets (css, images, favicons)
-app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend_root")
+# Fallback static mount for other potential static assets (css, images, favicons)
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend_root")
+
+# -------------------------------------------------
+# LearnEarly LMS Topic endpoints
+@app.get("/api/topics", response_model=List[TopicOut], tags=["Topics"])
+def get_topics():
+    """Return all topics."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, category, description, icon FROM topics ORDER BY title ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [TopicOut(**row) for row in rows]
+
+@app.get("/api/topics/{topic_id}", response_model=TopicOut, tags=["Topics"])
+def get_topic_detail(topic_id: int):
+    """Return a single topic."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, category, description, icon FROM topics WHERE id = ?", (topic_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Topic {topic_id} not found")
+    return TopicOut(**row)
+
+@app.get("/api/topics/{topic_id}/notes", response_model=List[LectureNoteOut], tags=["Topics"])
+def get_topic_notes(topic_id: int):
+    """Return all lecture notes linked to a topic."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, topic_id, note_path, note_title FROM lecture_notes WHERE topic_id = ? ORDER BY note_title ASC",
+        (topic_id,),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [LectureNoteOut(**row) for row in rows]
+
+@app.get("/api/notes/content", tags=["Notes"])
+def get_note_content(path: str):
+    """Render a markdown note from the vault as HTML.
+    ``path`` should be the absolute path to the markdown file, or relative to vault.
+    """
+    import pathlib, markdown
+    note_path = pathlib.Path(path)
+    
+    # Fallback to bundled data/vault if local path not found (e.g. on Vercel deployment)
+    if not note_path.is_file():
+        vault_fallback = Path(__file__).resolve().parent.parent / "data" / "vault"
+        filename = note_path.name
+        candidates = list(vault_fallback.rglob(f"*{filename}*"))
+        if candidates:
+            note_path = candidates[0]
+
+    if not note_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Note file not found")
+    try:
+        text = note_path.read_text(encoding="utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    html = markdown.markdown(text, extensions=["fenced_code", "codehilite", "tables", "toc"])
+    return {"html": html}
+
+
+@app.get("/api/vault/status", tags=["Vault"])
+def get_vault_status():
+    """Returns connected vault information and sync metrics."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) AS total_notes FROM lecture_notes")
+    total_notes = cursor.fetchone()["total_notes"]
+    
+    cursor.execute("SELECT t.title, COUNT(n.id) as count FROM topics t LEFT JOIN lecture_notes n ON t.id = n.topic_id GROUP BY t.id")
+    category_rows = cursor.fetchall()
+    conn.close()
+
+    vault_path = Path(r"D:\o.vault\temp_unzip\PM2-Obsidian-Vault - Copy")
+    if not vault_path.is_dir():
+        vault_path = Path(__file__).resolve().parent.parent / "data" / "vault"
+    exists = vault_path.is_dir()
+    
+    return {
+        "status": "connected" if exists else "disconnected",
+        "vault_path": str(vault_path),
+        "total_notes": total_notes,
+        "is_connected": exists,
+        "last_sync": "Active (Obsidian Vault)",
+        "categories": [{"name": row["title"], "count": row["count"]} for row in category_rows]
+    }
+
+
+@app.get("/api/notes/search", tags=["Notes"])
+def search_notes(q: str = Query(..., min_length=1, description="Search query")):
+    """Searches notes by title or content."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT n.id, n.topic_id, n.note_path, n.note_title, t.title AS topic_title
+        FROM lecture_notes n
+        JOIN topics t ON n.topic_id = t.id
+        WHERE LOWER(n.note_title) LIKE LOWER(?) OR LOWER(n.note_path) LIKE LOWER(?)
+        LIMIT 25
+        """,
+        (f"%{q}%", f"%{q}%")
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {
+            "id": r["id"],
+            "note_title": r["note_title"],
+            "note_path": r["note_path"],
+            "topic_title": r["topic_title"]
+        }
+        for r in rows
+    ]
+
+
+@app.get("/api/lms/dashboard", tags=["LMS"])
+def get_lms_dashboard():
+    """Returns dynamic data for the Learn Early dashboard from SQLite."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # User Settings
+    cursor.execute("SELECT * FROM lms_settings WHERE id = 1")
+    user_row = cursor.fetchone()
+    if user_row:
+        user_data = {
+            "name": user_row["user_name"],
+            "streak_pct": user_row["streak_pct"],
+            "streak_days": user_row["streak_days"],
+            "avatar": user_row["avatar_url"] or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+            "theme": user_row["theme"],
+            "total_studied": user_row["total_studied"]
+        }
+    else:
+        user_data = {
+            "name": "Khushi",
+            "streak_pct": 10,
+            "streak_days": 4,
+            "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
+            "theme": "dark",
+            "total_studied": 18
+        }
+
+    # Active Daily Class
+    cursor.execute("SELECT * FROM lms_daily_classes WHERE is_active = 1 LIMIT 1")
+    dc_row = cursor.fetchone()
+    if not dc_row:
+        cursor.execute("SELECT * FROM lms_daily_classes ORDER BY day_number ASC LIMIT 1")
+        dc_row = cursor.fetchone()
+
+    live_class = {
+        "day": dc_row["day_tag"] if dc_row else "DAY 4",
+        "title": dc_row["title"] if dc_row else "DAY 4: API Testing with Postman",
+        "subtitle": dc_row["subtitle"] if dc_row else "Live interactive class, JWT tokens, and hands-on testing.",
+        "note_path": dc_row["note_path"] if dc_row else "",
+        "icon": dc_row["icon"] if dc_row else "🚀"
+    }
+
+    # Tools
+    cursor.execute("SELECT * FROM lms_tools ORDER BY display_order ASC, id ASC")
+    tool_rows = cursor.fetchall()
+    toolkit = []
+    for tr in tool_rows:
+        t_id = tr["id"]
+        cursor.execute("SELECT step_number, title, level, summary, note_path, status FROM lms_tool_topics WHERE tool_id = ? ORDER BY step_number ASC", (t_id,))
+        topics = [dict(row) for row in cursor.fetchall()]
+        toolkit.append({
+            "id": t_id,
+            "name": tr["name"],
+            "category": tr["category"],
+            "icon": tr["icon"],
+            "badge_color": tr["badge_color"],
+            "completed_pct": tr["completed_pct"],
+            "hands_on": bool(tr["hands_on"]),
+            "note_title": tr["note_title"],
+            "note_path": tr["note_path"],
+            "is_custom": bool(tr["is_custom"]),
+            "topics": topics
+        })
+
+    # Challenges
+    challenges = [
+        {"id": 1, "title": "Deploy SQLite Query", "progress": 75, "xp": 250, "note_path": toolkit[-1]["note_path"] if toolkit else ""},
+        {"id": 2, "title": "Graph 10 Obsidian Links", "progress": 40, "xp": 180, "note_path": toolkit[2]["note_path"] if len(toolkit) > 2 else ""},
+        {"id": 3, "title": "Master Postman API Testing", "progress": 85, "xp": 300, "note_path": toolkit[1]["note_path"] if len(toolkit) > 1 else ""},
+        {"id": 4, "title": "Claud Architecture Blueprint", "progress": 60, "xp": 220, "note_path": toolkit[4]["note_path"] if len(toolkit) > 4 else ""}
+    ]
+
+    # Knowledge Graph with ALL tools: Anti-Gravity, Postman, Obsidian, Pomeli AI, Claud Design, SQLite
+    cursor.execute("SELECT * FROM lms_knowledge_links")
+    link_rows = cursor.fetchall()
+    links = [
+        {
+            "source": r["source_id"],
+            "target": r["target_id"],
+            "strength": r["strength"],
+            "weight": r["weight"],
+            "why_linked": r["why_linked"],
+            "data_flow": r["data_flow"]
+        }
+        for r in link_rows
+    ]
+
+    nodes = [
+        {"id": "anti-gravity", "label": "Anti-Gravity", "sub": "Prioritization", "group": "cyan", "x": 60, "y": 60, "connections": 3},
+        {"id": "postman", "label": "Postman", "sub": "API Testing", "group": "orange", "x": 200, "y": 50, "connections": 2},
+        {"id": "obsidian", "label": "Obsidian", "sub": "Knowledge Vault", "group": "purple", "x": 70, "y": 180, "connections": 3},
+        {"id": "pomeli-ai", "label": "Pomeli AI", "sub": "Product Research", "group": "purple", "x": 160, "y": 115, "connections": 3},
+        {"id": "claud-design", "label": "Claud Design", "sub": "System Arch.", "group": "blue", "x": 270, "y": 110, "connections": 3},
+        {"id": "sqlite", "label": "SQLite", "sub": "Data Analytics", "group": "blue", "x": 220, "y": 195, "connections": 3},
+        {"id": "pm-frameworks", "label": "PM Frameworks", "sub": "Core Models", "group": "indigo", "x": 330, "y": 185, "connections": 2}
+    ]
+
+    conn.close()
+
+    return {
+        "user": user_data,
+        "live_class": live_class,
+        "toolkit": toolkit,
+        "challenges": challenges,
+        "graph": {
+            "nodes": nodes,
+            "links": links
+        }
+    }
+
+
+@app.get("/api/lms/tools/{tool_id}/topics", tags=["LMS"])
+def get_tool_topics(tool_id: str):
+    """Returns numbered 1, 2, 3, 4 topics from basics to advanced for a tool."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    SELECT step_number, title, level, summary, note_path, status
+    FROM lms_tool_topics
+    WHERE tool_id = ?
+    ORDER BY step_number ASC
+    """, (tool_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/lms/study/questions", tags=["LMS"])
+def get_study_questions(tool_id: Optional[str] = Query(None)):
+    """Returns question bank for Study Labs practice."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if tool_id and tool_id != "all":
+        cursor.execute("SELECT * FROM lms_study_questions WHERE tool_id = ? ORDER BY id ASC", (tool_id,))
+    else:
+        cursor.execute("SELECT * FROM lms_study_questions ORDER BY id ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    import json
+    return [
+        {
+            "id": r["id"],
+            "tool_id": r["tool_id"],
+            "topic_title": r["topic_title"],
+            "question": r["question"],
+            "options": json.loads(r["options_json"]),
+            "correct_index": r["correct_index"],
+            "explanation": r["explanation"]
+        }
+        for r in rows
+    ]
+
+
+@app.get("/api/lms/study/tasks", tags=["LMS"])
+def get_study_tasks(tool_id: Optional[str] = Query(None)):
+    """Returns hands-on practical assignments distinct from MCQs."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if tool_id and tool_id != "all":
+        cursor.execute("SELECT * FROM lms_tasks WHERE tool_id = ? ORDER BY id ASC", (tool_id,))
+    else:
+        cursor.execute("SELECT * FROM lms_tasks ORDER BY id ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    import json
+    return [
+        {
+            "id": r["id"],
+            "tool_id": r["tool_id"],
+            "title": r["title"],
+            "description": r["description"],
+            "steps": json.loads(r["steps_json"]),
+            "difficulty": r["difficulty"],
+            "xp": r["xp"]
+        }
+        for r in rows
+    ]
+
+
+@app.get("/api/lms/knowledge-web", tags=["LMS"])
+def get_knowledge_web_details():
+    """Returns full Knowledge Web network data, weights, and connection reasons."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM lms_knowledge_links")
+    link_rows = cursor.fetchall()
+    cursor.execute("SELECT id, name, category, icon FROM lms_tools")
+    tool_rows = cursor.fetchall()
+    conn.close()
+
+    tools_map = {r["id"]: dict(r) for r in tool_rows}
+    links = [
+        {
+            "source_id": r["source_id"],
+            "target_id": r["target_id"],
+            "strength": r["strength"],
+            "weight": r["weight"],
+            "why_linked": r["why_linked"],
+            "data_flow": r["data_flow"]
+        }
+        for r in link_rows
+    ]
+    return {"tools": tools_map, "links": links}
+
+
+@app.get("/api/lms/settings", tags=["LMS"])
+def get_lms_settings():
+    """Returns current user settings, study analytics, and session timeline."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM lms_settings WHERE id = 1")
+    user_row = cursor.fetchone()
+    cursor.execute("SELECT * FROM lms_activity_log ORDER BY id DESC LIMIT 15")
+    logs = [dict(r) for r in cursor.fetchall()]
+    cursor.execute("SELECT COUNT(*) as tool_cnt FROM lms_tools")
+    tool_cnt = cursor.fetchone()["tool_cnt"]
+    cursor.execute("SELECT COUNT(*) as class_cnt FROM lms_daily_classes")
+    class_cnt = cursor.fetchone()["class_cnt"]
+    conn.close()
+
+    return {
+        "user_name": user_row["user_name"] if user_row else "Khushi",
+        "avatar_url": user_row["avatar_url"] if user_row else "",
+        "theme": user_row["theme"] if user_row else "dark",
+        "streak_pct": user_row["streak_pct"] if user_row else 10,
+        "streak_days": user_row["streak_days"] if user_row else 4,
+        "total_studied": user_row["total_studied"] if user_row else 18,
+        "mcqs_attempted": user_row["mcqs_attempted"] if user_row else 42,
+        "mcqs_correct": user_row["mcqs_correct"] if user_row else 38,
+        "total_tools": tool_cnt,
+        "total_classes": class_cnt,
+        "activity_logs": logs
+    }
+
+
+class SettingsUpdateIn(BaseModel):
+    user_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    theme: Optional[str] = None
+
+
+@app.post("/api/lms/settings", tags=["LMS"])
+def update_lms_settings(payload: SettingsUpdateIn):
+    """Updates user profile settings (name, avatar, theme)."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if payload.user_name:
+        cursor.execute("UPDATE lms_settings SET user_name = ? WHERE id = 1", (payload.user_name.strip(),))
+    if payload.avatar_url:
+        cursor.execute("UPDATE lms_settings SET avatar_url = ? WHERE id = 1", (payload.avatar_url.strip(),))
+    if payload.theme:
+        cursor.execute("UPDATE lms_settings SET theme = ? WHERE id = 1", (payload.theme.strip().lower(),))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "Settings updated"}
+
+
+class ToolCreateIn(BaseModel):
+    id: str
+    name: str
+    category: str
+    icon: Optional[str] = "delta"
+    topics: Optional[List[str]] = []
+
+
+@app.post("/api/lms/tools", tags=["LMS"])
+def create_lms_tool(payload: ToolCreateIn):
+    """Allows user to add a new Tool & Application with line-wise topics."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    tool_id = payload.id.strip().lower().replace(" ", "-")
+    cursor.execute("""
+    INSERT OR REPLACE INTO lms_tools (id, name, category, icon, badge_color, completed_pct, hands_on, note_title, note_path, is_custom, display_order)
+    VALUES (?, ?, ?, ?, ?, 0, 1, ?, '', 1, 99)
+    """, (tool_id, payload.name.strip(), payload.category.strip(), payload.icon or "delta", "cyan", f"{payload.name} Overview"))
+
+    if payload.topics:
+        for idx, t_title in enumerate(payload.topics, start=1):
+            level = "Basics" if idx <= 2 else ("Intermediate" if idx <= 4 else "Advanced")
+            cursor.execute("""
+            INSERT INTO lms_tool_topics (tool_id, step_number, title, level, summary, note_path, status)
+            VALUES (?, ?, ?, ?, ?, '', 'pending')
+            """, (tool_id, idx, t_title.strip(), level, f"Core principles of {t_title}"))
+
+    conn.commit()
+    conn.close()
+    return {"status": "success", "tool_id": tool_id}
+
+
+@app.delete("/api/lms/tools/{tool_id}", tags=["LMS"])
+def delete_lms_tool(tool_id: str):
+    """Allows user to eliminate / delete a Tool & Application."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM lms_tools WHERE id = ?", (tool_id,))
+    cursor.execute("DELETE FROM lms_tool_topics WHERE tool_id = ?", (tool_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "deleted_id": tool_id}
+
+
+class DailyClassCreateIn(BaseModel):
+    day_number: int
+    day_tag: str
+    title: str
+    subtitle: Optional[str] = ""
+    note_path: Optional[str] = ""
+    icon: Optional[str] = "🚀"
+
+
+@app.post("/api/lms/daily-classes", tags=["LMS"])
+def add_daily_class(payload: DailyClassCreateIn):
+    """Allows user to add a new Daily Class to the hub."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO lms_daily_classes (day_number, day_tag, title, subtitle, note_path, icon, is_active)
+    VALUES (?, ?, ?, ?, ?, ?, 0)
+    """, (payload.day_number, payload.day_tag.strip(), payload.title.strip(), payload.subtitle.strip(), payload.note_path.strip(), payload.icon or "🚀"))
+    conn.commit()
+    conn.close()
+    return {"status": "success"}
+
+
+@app.get("/api/lms/daily-classes", tags=["LMS"])
+def get_daily_classes():
+    """Returns all scheduled daily classes."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM lms_daily_classes ORDER BY day_number ASC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+

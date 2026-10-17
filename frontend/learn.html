@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Early Learn – Personal Knowledge & Learning System</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Mermaid.js for diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              teal: '#14b8a6',
+              cyan: '#06b6d4',
+              dark: '#0a0f18',
+              card: '#131c2c',
+              border: '#1f2d42'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="/static/css/style.css?v=20261017" rel="stylesheet" />
+</head>
+<body class="bg-[#0b1019] text-gray-100 min-h-screen flex flex-col selection:bg-teal-500 selection:text-white">
+
+  <!-- ================= TOP NAVIGATION BAR ================= -->
+  <header class="bg-[#0f1726] border-b border-white/[0.08] px-6 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md">
+    <!-- Left: Logo -->
+    <div class="flex items-center space-x-3 cursor-pointer" onclick="switchNavTab('dashboard')">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-teal-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-teal-500/20">
+        <svg class="w-5 h-5 text-slate-950" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2L2 9L12 16L22 9L12 2Z" />
+          <path d="M2 14L12 21L22 14" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="flex items-baseline space-x-1">
+        <span class="text-xl font-bold tracking-tight text-white header-brand-text">learn</span>
+        <span class="text-xl font-bold tracking-tight text-teal-400">early</span>
+      </div>
+    </div>
+
+    <!-- Center: Search Input with Autocomplete -->
+    <div class="relative w-full max-w-md hidden md:block">
+      <div class="relative flex items-center">
+        <svg class="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input 
+          id="global-search-input"
+          type="text" 
+          placeholder="Search tools, notes, or frameworks..." 
+          class="w-full bg-[#141d2d] border border-white/10 rounded-full pl-10 pr-4 py-1.5 text-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition shadow-inner header-search"
+        />
+      </div>
+      <!-- Autocomplete Dropdown -->
+      <div id="search-dropdown" class="absolute left-0 right-0 top-11 bg-[#131d2e] border border-slate-700 rounded-xl shadow-2xl p-2 hidden z-50 max-h-80 overflow-y-auto">
+        <div id="search-results-list" class="space-y-1"></div>
+      </div>
+    </div>
+
+    <!-- Right: User Profile, Streak & Settings -->
+    <div class="flex items-center space-x-3">
+      <!-- Profile Pill (Clickable -> Opens Settings) -->
+      <div onclick="openSettingsModal('profile')" class="flex items-center space-x-3 bg-[#141d2d] border border-white/[0.08] hover:border-teal-500/50 rounded-full px-3 py-1.5 shadow-sm cursor-pointer transition">
+        <img 
+          id="header-avatar"
+          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" 
+          alt="Avatar" 
+          class="w-7 h-7 rounded-full border border-teal-400 object-cover"
+        />
+        <div class="text-left">
+          <div class="text-xs font-semibold text-white leading-tight">
+            Welcome back, <span id="header-user-name" class="text-teal-400">Khushi</span>
+          </div>
+          <div class="flex items-center space-x-1.5 text-[10px] text-gray-300">
+            <span>Streak 🔥</span>
+            <div class="w-14 bg-gray-700 h-1.5 rounded-full overflow-hidden inline-block">
+              <div id="streak-bar" class="bg-gradient-to-r from-orange-500 to-amber-400 h-full w-[10%] transition-all duration-500"></div>
+            </div>
+            <span id="streak-val" class="text-orange-400 font-bold">10%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Bell -->
+      <button onclick="openSettingsModal('notifications')" class="relative p-2 rounded-full bg-[#141d2d] border border-white/[0.08] hover:border-teal-500/50 text-gray-300 hover:text-white transition cursor-pointer" title="Notifications">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+        </svg>
+        <span class="absolute top-1 right-1 w-2 h-2 bg-teal-400 rounded-full ring-2 ring-[#0f1726]"></span>
+      </button>
+
+      <!-- Settings Button -->
+      <button onclick="openSettingsModal('general')" class="p-2 rounded-full bg-[#141d2d] border border-white/[0.08] hover:border-teal-500/50 text-gray-300 hover:text-white transition cursor-pointer" title="Dashboard Settings">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= SUB-NAVIGATION TABS BAR ================= -->
+  <nav class="bg-[#0c121d] border-b border-white/[0.05] px-6 py-2.5">
+    <div class="flex items-center space-x-2 overflow-x-auto text-xs font-medium no-scrollbar">
+      <!-- Nav Pill Tabs -->
+      <button id="nav-btn-dashboard" onclick="switchNavTab('dashboard')" class="tab-active text-white px-3.5 py-1.5 rounded-full flex items-center space-x-1.5 shadow-md shadow-teal-500/20 font-semibold cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        <span>My Dashboard</span>
+      </button>
+
+      <button id="nav-btn-study-labs" onclick="switchNavTab('study-labs')" class="text-gray-400 hover:text-white hover:bg-white/[0.06] px-3.5 py-1.5 rounded-full transition flex items-center space-x-1.5 cursor-pointer">
+        <span>🧪 Study Labs</span>
+      </button>
+
+      <button onclick="openSandboxModal('Interactive Python & SQLite')" class="text-gray-400 hover:text-white hover:bg-white/[0.06] px-3.5 py-1.5 rounded-full transition flex items-center space-x-1.5 cursor-pointer">
+        <span>🛠 Playground & Sandbox</span>
+      </button>
+
+      <button id="nav-btn-knowledge-web" onclick="switchNavTab('knowledge-web')" class="text-gray-400 hover:text-white hover:bg-white/[0.06] px-3.5 py-1.5 rounded-full transition flex items-center space-x-1.5 cursor-pointer">
+        <span>🌐 The Knowledge Web</span>
+      </button>
+
+      <button id="nav-btn-team-projects" onclick="switchNavTab('team-projects')" class="text-gray-400 hover:text-white hover:bg-white/[0.06] px-3.5 py-1.5 rounded-full transition flex items-center space-x-1.5 cursor-pointer">
+        <span>👥 Team Projects</span>
+      </button>
+
+      <button id="nav-btn-community-hub" onclick="switchNavTab('community-hub')" class="text-gray-400 hover:text-white hover:bg-white/[0.06] px-3.5 py-1.5 rounded-full transition flex items-center space-x-1.5 cursor-pointer">
+        <span>🌍 Community Hub</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ================= VIEW 1: MASTER DASHBOARD ================= -->
+  <main id="view-dashboard" class="flex-1 px-6 py-5 max-w-[1700px] w-full mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+      <!-- ================= COLUMN 1: LEFT (PM TOOLKIT) ================= -->
+      <section class="lg:col-span-4 flex flex-col space-y-4">
+        <!-- Section Header -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-white tracking-wide">My PM Toolkit</h2>
+            <p class="text-xs text-gray-400">Daily/weekly tool tracking to your store today</p>
+          </div>
+          <!-- Daily / Weekly Toggle -->
+          <div class="bg-[#121927] border border-white/10 rounded-full p-0.5 flex text-[11px] font-semibold">
+            <button id="toggle-daily" class="bg-teal-600 text-white px-2.5 py-0.5 rounded-full transition cursor-pointer">Daily</button>
+            <button id="toggle-weekly" class="text-gray-400 hover:text-white px-2.5 py-0.5 rounded-full transition cursor-pointer">Weekly</button>
+          </div>
+        </div>
+
+        <!-- WEEK 2 Card Container -->
+        <div class="dash-card p-4 bg-[#101725] border border-white/[0.08] flex-1">
+          <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.06]">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400">
+                WEEK 2: Tools & Application (Part 2)
+              </h3>
+              <p class="text-[10px] text-gray-400 mt-0.5">Click any tool to explore line-wise topics from basics to advanced</p>
+            </div>
+            <button onclick="openSettingsModal('tools')" class="text-teal-400 hover:underline text-xs flex items-center space-x-1">
+              <span>+ Add Tool</span>
+            </button>
+          </div>
+
+          <!-- 2-Column Grid of Tool Cards (Anti-Gravity, Postman, Obsidian, Pomeli AI, Claud Design, SQLite...) -->
+          <div id="toolkit-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Dynamically populated by learn.js with step-by-step topic links -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= COLUMN 2: CENTER (CLASS HUB & TERMINAL) ================= -->
+      <section class="lg:col-span-4 flex flex-col space-y-4">
+
+        <!-- Center Card 1: Live Class Hub & Sandbox Link -->
+        <div class="dash-card relative overflow-hidden bg-gradient-to-br from-[#064e3b]/40 via-[#0c1829] to-[#0a101b] border border-teal-500/30 p-5 rounded-2xl flex flex-col justify-between">
+          <div class="flex items-start justify-between">
+            <div class="space-y-1 max-w-[70%]">
+              <span id="live-class-day" class="inline-block text-[11px] font-bold text-teal-400 bg-teal-950/80 border border-teal-500/40 px-2 py-0.5 rounded uppercase tracking-wider">
+                DAY 4
+              </span>
+              <h3 id="live-class-title" class="text-lg font-bold text-white tracking-tight leading-snug">
+                DAY 4: API Testing with Postman
+              </h3>
+              <p id="live-class-subtitle" class="text-xs text-gray-400">
+                Live interactive class, request authentication, JWT tokens, and hands-on testing.
+              </p>
+            </div>
+            <!-- Orange Rocket Illustration Badge -->
+            <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30 text-2xl flex-shrink-0 animate-pulse">
+              🚀
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center space-x-2.5 mt-5">
+            <button 
+              onclick="openLiveLab()" 
+              class="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-lg shadow-teal-500/25 transition active:scale-95 cursor-pointer">
+              Join Lab
+            </button>
+            <button 
+              onclick="downloadSandboxSpec()" 
+              class="bg-[#141e2e] hover:bg-[#1c293d] border border-white/10 text-white font-medium text-xs px-3 py-2 rounded-xl transition cursor-pointer">
+              Download Sandbox
+            </button>
+            <button 
+              id="live-class-notes-btn"
+              onclick="openNoteByQuery('Session-04-APIs-Integrations')" 
+              class="bg-[#141e2e] hover:bg-[#1c293d] border border-white/10 text-white font-medium text-xs px-3 py-2 rounded-xl transition cursor-pointer">
+              Class Notes
+            </button>
+          </div>
+        </div>
+
+        <!-- Center Card 2: Terminal & Sandbox Integration -->
+        <div class="dash-card bg-[#0b121e] border border-white/[0.08] p-4 rounded-2xl flex-1 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold text-white tracking-wide">Terminal & Sandbox Integration</h3>
+            <button onclick="openSandboxModal('System Sandbox')" class="text-gray-500 hover:text-gray-300">⋮</button>
+          </div>
+
+          <!-- Terminal Window Container -->
+          <div class="bg-[#080d15] border border-slate-800 rounded-xl p-3 flex-1 flex flex-col justify-between font-mono">
+            <!-- Window Bar -->
+            <div class="flex items-center space-x-2 pb-2.5 border-b border-slate-800/80 text-[11px] text-gray-400">
+              <div class="flex space-x-1.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+              </div>
+              <span class="pl-2 text-gray-400">$ terminal sandbox ~</span>
+            </div>
+
+            <!-- Architecture Flow Representation (Obsidian -> Connectors -> Tools) -->
+            <div class="py-4 relative flex items-center justify-between">
+              
+              <!-- Left: Obsidian Vault Card -->
+              <div class="bg-[#111927] border border-teal-500/30 rounded-xl p-3 w-40 z-10 shadow-lg">
+                <div class="flex items-center space-x-1.5 mb-2">
+                  <span class="text-sm">💎</span>
+                  <span class="text-xs font-bold text-white">Obsidian Vault</span>
+                </div>
+                <div class="space-y-1 text-[10px] text-gray-400 mb-3">
+                  <div class="flex items-center space-x-1">
+                    <span class="text-teal-400">⛓</span>
+                    <span>Link Obsidian</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-teal-400">🔗</span>
+                    <span>Link to Notes</span>
+                  </div>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-teal-400">📁</span>
+                    <span>Integrate Notes</span>
+                  </div>
+                </div>
+                <button 
+                  onclick="openVaultModal()" 
+                  class="w-full bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-[10px] py-1.5 px-2 rounded-lg transition text-center shadow-md shadow-teal-500/20 cursor-pointer">
+                  Integrate Vault
+                </button>
+              </div>
+
+              <!-- Center: Connected SVG Bezier Cables with flow animation -->
+              <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 320 120" fill="none">
+                  <path d="M 140 60 C 180 60, 200 25, 260 25" stroke="#8b5cf6" stroke-width="2" class="flow-cable" opacity="0.8"/>
+                  <path d="M 140 60 C 180 60, 200 50, 260 50" stroke="#f97316" stroke-width="2" class="flow-cable" opacity="0.8"/>
+                  <path d="M 140 60 C 180 60, 200 75, 260 75" stroke="#06b6d4" stroke-width="2" class="flow-cable" opacity="0.8"/>
+                  <path d="M 140 60 C 180 60, 200 95, 260 95" stroke="#3b82f6" stroke-width="2" class="flow-cable" opacity="0.8"/>
+                </svg>
+              </div>
+
+              <!-- Right: Target Nodes Stack -->
+              <div class="space-y-1.5 z-10 pl-4">
+                <div class="w-7 h-7 rounded-lg bg-purple-900/60 border border-purple-500/50 flex items-center justify-center text-xs shadow-md" title="Obsidian">
+                  💎
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-orange-900/60 border border-orange-500/50 flex items-center justify-center text-xs shadow-md" title="Postman">
+                  🚀
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-cyan-900/60 border border-cyan-500/50 flex items-center justify-center text-xs shadow-md" title="Terminal">
+                  💻
+                </div>
+                <div class="w-7 h-7 rounded-lg bg-blue-900/60 border border-blue-500/50 flex items-center justify-center text-xs shadow-md" title="SQLite">
+                  🐬
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Terminal Prompt Bottom Bar -->
+            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-gray-400">
+              <span class="text-teal-400">● 79 Notes Synced from D:\o.vault</span>
+              <button onclick="openSandboxModal('Terminal Sandbox')" class="text-teal-400 hover:underline">Open Shell &gt;</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= COLUMN 3: RIGHT (GRAPH & CHALLENGES) ================= -->
+      <section class="lg:col-span-4 flex flex-col space-y-4">
+
+        <!-- Right Card 1: Knowledge Graph (The Knowledge Web) -->
+        <div id="knowledge-graph-section" class="dash-card bg-[#0b121e] border border-white/[0.08] p-4 rounded-2xl">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-xs font-bold text-white tracking-wide">Knowledge Graph (The Knowledge Web)</h3>
+              <p class="text-[10px] text-gray-400">Anti-Gravity, Postman, Obsidian, Pomeli AI, Claud Design, SQLite</p>
+            </div>
+            <button onclick="switchNavTab('knowledge-web')" class="text-teal-400 text-xs hover:underline cursor-pointer">Full Map &gt;</button>
+          </div>
+
+          <!-- Interactive Graph Canvas / SVG -->
+          <div class="relative w-full h-56 bg-[#080d16] border border-slate-800/80 rounded-xl overflow-hidden flex items-center justify-center">
+            <svg id="interactive-network-svg" class="w-full h-full cursor-pointer" viewBox="0 0 360 230">
+              <!-- Animated edges and interactive nodes injected by learn.js -->
+            </svg>
+            <div class="absolute bottom-2 right-2 text-[10px] text-gray-500 pointer-events-none">
+              Click node to view topics
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Card 2: Active Challenges -->
+        <div class="dash-card bg-[#0b121e] border border-white/[0.08] p-4 rounded-2xl flex-1 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-1">
+            <div>
+              <h3 class="text-xs font-bold text-white tracking-wide">Active Challenges</h3>
+              <p class="text-[11px] text-gray-400">Gamified milestones & study quests</p>
+            </div>
+            <button onclick="switchNavTab('study-labs')" class="text-teal-400 hover:underline text-xs">Practice All &gt;</button>
+          </div>
+
+          <!-- Challenges 2x2 Grid -->
+          <div id="challenges-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-2">
+            <!-- Dynamically populated with Deploy SQLite Query, Graph 10 Obsidian Links, etc. -->
+          </div>
+
+          <div class="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[11px] text-gray-400">
+            <span>Weekly Progress: <strong class="text-teal-400">4 / 6 Done</strong></span>
+            <button onclick="switchNavTab('study-labs')" class="text-teal-400 hover:underline">Study Labs &gt;</button>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ================= VIEW 2: STUDY LABS (QUESTION BANK & TASKS) ================= -->
+  <main id="view-study-labs" class="flex-1 px-6 py-6 max-w-[1500px] w-full mx-auto hidden">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-white/[0.08] gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+          <span>🧪 Study Labs & Question Bank</span>
+        </h2>
+        <p class="text-xs text-gray-400 mt-1">
+          Master every tool with topic-by-topic question banks (~20 MCQs each) and hands-on practical assignments.
+        </p>
+      </div>
+
+      <!-- Mode Switcher: MCQs vs Tasks -->
+      <div class="flex items-center space-x-2 bg-[#121a28] p-1 rounded-xl border border-white/10 text-xs font-semibold">
+        <button id="mode-btn-mcqs" onclick="switchStudyMode('mcqs')" class="bg-teal-600 text-white px-4 py-1.5 rounded-lg shadow transition cursor-pointer">
+          🎯 Practice Question Bank (MCQs)
+        </button>
+        <button id="mode-btn-tasks" onclick="switchStudyMode('tasks')" class="text-gray-400 hover:text-white px-4 py-1.5 rounded-lg transition cursor-pointer">
+          🛠 Hands-On Tasks & Assignments
+        </button>
+      </div>
+    </div>
+
+    <!-- Tool Selector Pills -->
+    <div class="flex items-center space-x-2 py-4 overflow-x-auto no-scrollbar border-b border-white/[0.06]">
+      <span class="text-xs text-gray-400 font-semibold mr-2">Select Tool:</span>
+      <div id="study-labs-tool-filters" class="flex items-center space-x-2">
+        <!-- Injected by learn.js: Anti-Gravity, Postman, Obsidian, Pomeli AI, Claud Design, SQLite -->
+      </div>
+    </div>
+
+    <!-- Study Content Container -->
+    <div class="py-6">
+      <!-- MCQ Bank Container -->
+      <div id="study-mcqs-section" class="space-y-4">
+        <div class="flex items-center justify-between bg-teal-950/40 border border-teal-500/30 rounded-xl p-4">
+          <div>
+            <h3 id="mcq-bank-title" class="text-sm font-bold text-teal-300">Anti-Gravity Question Bank (20 Questions)</h3>
+            <p class="text-xs text-gray-400">Test your mastery. Correct answers increase your study streak and earn XP.</p>
+          </div>
+          <div class="flex items-center space-x-3 text-xs">
+            <span class="text-gray-300">Score: <strong id="mcq-score-display" class="text-teal-400">0 / 0</strong></span>
+            <button onclick="resetCurrentQuiz()" class="text-xs bg-slate-800 hover:bg-slate-700 text-gray-200 px-3 py-1 rounded-lg border border-white/10">
+              Reset Quiz
+            </button>
+          </div>
+        </div>
+
+        <div id="study-mcqs-list" class="space-y-4">
+          <!-- 20 MCQs dynamically loaded -->
+        </div>
+      </div>
+
+      <!-- Hands-On Tasks Container (Hidden by default) -->
+      <div id="study-tasks-section" class="space-y-4 hidden">
+        <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-4">
+          <h3 class="text-sm font-bold text-indigo-300">🛠 Practical Hands-On Assignments</h3>
+          <p class="text-xs text-gray-400">Step-by-step technical challenges. Complete them in the sandbox environment to earn verified badges.</p>
+        </div>
+        <div id="study-tasks-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Practical tasks loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= VIEW 3: THE KNOWLEDGE WEB (DEDICATED FULL VIEW) ================= -->
+  <main id="view-knowledge-web" class="flex-1 px-6 py-6 max-w-[1600px] w-full mx-auto hidden">
+    <div class="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+      <div>
+        <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+          <span>🌐 The Knowledge Web & Interconnection Matrix</span>
+        </h2>
+        <p class="text-xs text-gray-400 mt-1">
+          Explore how Anti-Gravity, Postman, Obsidian, Pomeli AI, Claud Design, and SQLite interconnect in your workflow.
+        </p>
+      </div>
+      <div class="text-xs text-gray-400">
+        Total Nodes: <strong class="text-teal-400">7 Connected Entities</strong>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+      <!-- Left: Interactive Canvas -->
+      <div class="lg:col-span-7 bg-[#090e17] border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-2xl min-h-[500px]">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-bold text-teal-400 uppercase tracking-wider">Interactive Relationship Topology</span>
+          <span class="text-[11px] text-gray-500">Click any connection or tool node for details</span>
+        </div>
+        <div class="flex-1 relative flex items-center justify-center">
+          <svg id="full-knowledge-web-svg" class="w-full h-full min-h-[400px]" viewBox="0 0 400 280">
+            <!-- Full network graph -->
+          </svg>
+        </div>
+      </div>
+
+      <!-- Right: Link Rationale & Hierarchy (Why They Are Linked) -->
+      <div class="lg:col-span-5 bg-[#0e1625] border border-white/[0.08] rounded-2xl p-5 flex flex-col space-y-4">
+        <div>
+          <h3 class="text-sm font-bold text-white">How & Why Tools Are Linked</h3>
+          <p class="text-xs text-gray-400">Understanding workflow synergies, link weights, and data flows.</p>
+        </div>
+
+        <div id="knowledge-links-details-list" class="space-y-3 overflow-y-auto max-h-[500px] pr-1">
+          <!-- Dynamically populated with link cards explaining why they are linked -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= VIEW 4: TEAM PROJECTS (BLANK AS REQUESTED) ================= -->
+  <main id="view-team-projects" class="flex-1 px-6 py-16 max-w-4xl w-full mx-auto text-center hidden">
+    <div class="p-12 rounded-3xl border border-dashed border-slate-700 bg-[#0e1625]/50 flex flex-col items-center justify-center space-y-4">
+      <div class="w-16 h-16 rounded-2xl bg-slate-800/80 flex items-center justify-center text-3xl text-gray-400">
+        👥
+      </div>
+      <h2 class="text-xl font-bold text-white">Team Projects</h2>
+      <p class="text-xs text-gray-400 max-w-md">
+        This workspace is currently inactive and left blank as requested. Connect shared vaults or collaborate on team projects when you are ready.
+      </p>
+      <button onclick="switchNavTab('dashboard')" class="bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition">
+        Return to Dashboard
+      </button>
+    </div>
+  </main>
+
+  <!-- ================= VIEW 5: COMMUNITY HUB ================= -->
+  <main id="view-community-hub" class="flex-1 px-6 py-8 max-w-5xl w-full mx-auto hidden">
+    <div class="flex items-center justify-between pb-4 border-b border-white/[0.08] mb-6">
+      <div>
+        <h2 class="text-xl font-bold text-white">🌍 Community Hub & Study Circles</h2>
+        <p class="text-xs text-gray-400">Share vault notes, discuss PM frameworks, and compare study streaks with peers.</p>
+      </div>
+      <button onclick="alert('Note shared to Early Learn community exchange!')" class="bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition">
+        + Share Note to Hub
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="bg-[#121c2d] border border-white/10 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center space-x-2 text-teal-400 font-bold text-xs uppercase">
+          <span>🔥 Trending Vault MOCs</span>
+        </div>
+        <div class="space-y-2 text-xs">
+          <div class="p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 cursor-pointer" onclick="openNoteByQuery('MOC-Architecture')">
+            <div class="font-semibold text-white">MOC-Architecture.md</div>
+            <div class="text-[10px] text-gray-400">Shared by Antigravity Community • 42 stars</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 cursor-pointer" onclick="openNoteByQuery('MOC-APIs')">
+            <div class="font-semibold text-white">MOC-APIs & Webhooks.md</div>
+            <div class="text-[10px] text-gray-400">Shared by Postman Study Lab • 38 stars</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-[#121c2d] border border-white/10 rounded-2xl p-4 space-y-3 md:col-span-2">
+        <div class="flex items-center space-x-2 text-purple-400 font-bold text-xs uppercase">
+          <span>💬 Peer Discussion & Study Rooms</span>
+        </div>
+        <div class="space-y-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-slate-800/40 border border-white/[0.05]">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-white">How do you structure bi-directional links between APIs and DB schemas?</span>
+              <span class="text-[10px] text-gray-400">2h ago</span>
+            </div>
+            <p class="text-gray-300 text-[11px]">"I usually link the REST endpoint note directly to the ER-Diagram note using [[ER-Diagrams]]. This makes the graph view cluster them together nicely."</p>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-800/40 border border-white/[0.05]">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-white">Anti-Gravity subagent orchestration in production</span>
+              <span class="text-[10px] text-gray-400">5h ago</span>
+            </div>
+            <p class="text-gray-300 text-[11px]">"Using the reactive message wakeup instead of busy-wait loops has drastically cut token overhead during heavy refactors."</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= MODAL 1: TOOL TOPIC ROADMAP DRAWER (1, 2, 3, 4... BASICS TO ADVANCED) ================= -->
+  <div id="tool-roadmap-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-[#0f1726] border border-slate-700 rounded-2xl max-w-3xl w-full shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
+      <!-- Drawer Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-[#121c2e]">
+        <div class="flex items-center space-x-3">
+          <div id="roadmap-tool-icon" class="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-400 flex items-center justify-center text-lg font-bold shadow-md">
+            ▲
+          </div>
+          <div>
+            <h2 id="roadmap-tool-title" class="text-base font-bold text-white leading-tight">Anti-Gravity</h2>
+            <p id="roadmap-tool-desc" class="text-xs text-gray-400">Step-by-step topic roadmap from Basics to Advanced</p>
+          </div>
+        </div>
+        <button id="close-roadmap-modal" class="text-gray-400 hover:text-white p-1 text-xl">✖</button>
+      </div>
+
+      <!-- Drawer Body: Topics List (1, 2, 3, 4...) -->
+      <div class="p-6 overflow-y-auto space-y-3" id="roadmap-topics-list">
+        <!-- Injected dynamically: 1, 2, 3, 4, 5... -->
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="px-6 py-3 border-t border-slate-800 bg-[#0e1625] flex items-center justify-between text-xs text-gray-400">
+        <span>Curriculum Progress: <strong id="roadmap-progress-text" class="text-teal-400">100% Comprehensive</strong></span>
+        <button id="roadmap-practice-btn" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-md shadow-teal-500/20">
+          Practice Tool MCQs &gt;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 2: SETTINGS & PROFILE DASHBOARD ================= -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-[#0f1726] border border-slate-700 rounded-2xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      
+      <!-- Settings Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-[#121c2e]">
+        <div class="flex items-center space-x-2">
+          <span class="text-lg">⚙️</span>
+          <h2 class="text-base font-bold text-white">Dashboard Settings & Preferences</h2>
+        </div>
+        <button id="close-settings-modal" class="text-gray-400 hover:text-white text-xl">✖</button>
+      </div>
+
+      <!-- Settings Tabs -->
+      <div class="flex items-center space-x-2 px-6 pt-3 border-b border-slate-800 text-xs overflow-x-auto no-scrollbar">
+        <button id="tab-btn-set-profile" onclick="switchSettingsTab('profile')" class="tab-active text-white px-3 py-2 rounded-t-lg font-semibold">
+          👤 Profile & Name
+        </button>
+        <button id="tab-btn-set-appearance" onclick="switchSettingsTab('appearance')" class="text-gray-400 hover:text-white px-3 py-2 rounded-t-lg font-semibold">
+          🎨 Theme (Light/Dark)
+        </button>
+        <button id="tab-btn-set-history" onclick="switchSettingsTab('history')" class="text-gray-400 hover:text-white px-3 py-2 rounded-t-lg font-semibold">
+          📊 Study History & Times
+        </button>
+        <button id="tab-btn-set-notifications" onclick="switchSettingsTab('notifications')" class="text-gray-400 hover:text-white px-3 py-2 rounded-t-lg font-semibold">
+          🔔 Notifications
+        </button>
+        <button id="tab-btn-set-tools" onclick="switchSettingsTab('tools')" class="text-gray-400 hover:text-white px-3 py-2 rounded-t-lg font-semibold">
+          🛠 Manage Tools
+        </button>
+        <button id="tab-btn-set-classes" onclick="switchSettingsTab('classes')" class="text-gray-400 hover:text-white px-3 py-2 rounded-t-lg font-semibold">
+          📅 Daily Classes
+        </button>
+      </div>
+
+      <!-- Settings Content Panels -->
+      <div class="p-6 overflow-y-auto flex-1 text-xs space-y-6">
+
+        <!-- Panel 1: Profile & Name -->
+        <div id="set-panel-profile" class="space-y-4">
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-3">
+            <h3 class="text-sm font-bold text-white">Learner Identity</h3>
+            <p class="text-gray-400">Customize how you appear across the Early Learn platform.</p>
+            
+            <div class="space-y-1.5">
+              <label class="text-gray-300 font-semibold">Your Display Name</label>
+              <input id="input-settings-name" type="text" value="Khushi" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500"/>
+              <p class="text-[10px] text-gray-500">Will update the greeting: "Welcome back, Khushi"</p>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-gray-300 font-semibold">Profile Avatar Image URL</label>
+              <input id="input-settings-avatar" type="text" value="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-teal-500"/>
+            </div>
+
+            <button onclick="saveUserProfile()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-4 py-2 rounded-lg transition shadow-md shadow-teal-500/20">
+              Save Profile Changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel 2: Appearance & Light/Dark Mode -->
+        <div id="set-panel-appearance" class="space-y-4 hidden">
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-4">
+            <h3 class="text-sm font-bold text-white">Visual Appearance & Display Mode</h3>
+            <p class="text-gray-400">Choose between dark cyberpunk mode and clean warm ivory light mode.</p>
+            
+            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 border border-white/10">
+              <div>
+                <div class="font-bold text-white">Theme Mode</div>
+                <div class="text-[11px] text-gray-400" id="current-theme-label">Active: Dark Cyberpunk Mode</div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button onclick="setTheme('dark')" id="theme-btn-dark" class="bg-teal-600 text-white px-3 py-1.5 rounded-lg font-bold">
+                  🌙 Dark Mode
+                </button>
+                <button onclick="setTheme('light')" id="theme-btn-light" class="bg-slate-700 text-gray-200 px-3 py-1.5 rounded-lg font-bold">
+                  ☀️ Light Mode
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 3: Study History & Times of Day -->
+        <div id="set-panel-history" class="space-y-4 hidden">
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div class="bg-[#121c2c] border border-white/10 rounded-xl p-3">
+              <div class="text-[10px] text-gray-400 uppercase font-bold">Total Studied</div>
+              <div class="text-lg font-bold text-teal-400 mt-0.5" id="stats-total-studied">18 Topics</div>
+            </div>
+            <div class="bg-[#121c2c] border border-white/10 rounded-xl p-3">
+              <div class="text-[10px] text-gray-400 uppercase font-bold">MCQs Practiced</div>
+              <div class="text-lg font-bold text-cyan-400 mt-0.5" id="stats-mcqs">42 Attempted</div>
+            </div>
+            <div class="bg-[#121c2c] border border-white/10 rounded-xl p-3">
+              <div class="text-[10px] text-gray-400 uppercase font-bold">Accuracy</div>
+              <div class="text-lg font-bold text-purple-400 mt-0.5">90.4%</div>
+            </div>
+          </div>
+
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-3">
+            <h3 class="text-sm font-bold text-white">What Times of the Day You Came Here</h3>
+            <p class="text-gray-400">Session logs and study timeline across morning, afternoon, and evening.</p>
+            <div id="activity-logs-container" class="space-y-2">
+              <!-- Injected activity log -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 4: Notifications -->
+        <div id="set-panel-notifications" class="space-y-4 hidden">
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-3">
+            <h3 class="text-sm font-bold text-white">Activity Alerts & Notifications</h3>
+            <div class="space-y-2 text-xs">
+              <div class="p-3 rounded-lg bg-teal-950/30 border border-teal-500/30 text-teal-300 flex items-center justify-between">
+                <span>🚀 Day 4 Live Class "API Testing with Postman" is currently open for practice.</span>
+                <span class="text-[10px] text-gray-400">Today</span>
+              </div>
+              <div class="p-3 rounded-lg bg-slate-800/40 border border-white/10 text-gray-300 flex items-center justify-between">
+                <span>💎 Obsidian Vault integration active: 79 notes indexed in local SQLite.</span>
+                <span class="text-[10px] text-gray-400">1h ago</span>
+              </div>
+              <div class="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-300 flex items-center justify-between">
+                <span>🔥 Learning streak maintained! 4 active days in a row.</span>
+                <span class="text-[10px] text-gray-400">Yesterday</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 5: Manage Tools & Applications -->
+        <div id="set-panel-tools" class="space-y-4 hidden">
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-3">
+            <h3 class="text-sm font-bold text-white">Add a New Tool & Application</h3>
+            <p class="text-gray-400">Expand your toolkit with custom engineering or PM tools.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-gray-300 font-semibold">Tool Name</label>
+                <input id="new-tool-name" type="text" placeholder="e.g. Supabase, Docker, Figma" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1"/>
+              </div>
+              <div>
+                <label class="text-gray-300 font-semibold">Category</label>
+                <input id="new-tool-category" type="text" placeholder="e.g. Backend DB, DevOps" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1"/>
+              </div>
+            </div>
+            <div>
+              <label class="text-gray-300 font-semibold">Step-by-Step Topics (comma separated, 1, 2, 3...)</label>
+              <textarea id="new-tool-topics" placeholder="1. Getting Started, 2. Schema Setup, 3. Production Deployment" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1 h-16"></textarea>
+            </div>
+            <button onclick="addNewTool()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-4 py-2 rounded-lg transition">
+              + Add Tool to Dashboard
+            </button>
+          </div>
+
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-2">
+            <h3 class="text-sm font-bold text-white">Current Tools & Elimination</h3>
+            <p class="text-gray-400">Manage or eliminate tools from your daily toolkit.</p>
+            <div id="manage-tools-list" class="space-y-2">
+              <!-- Injected tools list with Eliminate button -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 6: Manage Daily Classes -->
+        <div id="set-panel-classes" class="space-y-4 hidden">
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-4 space-y-3">
+            <h3 class="text-sm font-bold text-white">Add New Daily Class</h3>
+            <p class="text-gray-400">Schedule upcoming classes as the curriculum progresses.</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-gray-300 font-semibold">Day Tag (e.g. DAY 8)</label>
+                <input id="new-class-tag" type="text" placeholder="DAY 8" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1"/>
+              </div>
+              <div>
+                <label class="text-gray-300 font-semibold">Day Number</label>
+                <input id="new-class-num" type="number" value="8" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1"/>
+              </div>
+            </div>
+            <div>
+              <label class="text-gray-300 font-semibold">Class Title</label>
+              <input id="new-class-title" type="text" placeholder="DAY 8: Distributed Caching with Redis" class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1"/>
+            </div>
+            <div>
+              <label class="text-gray-300 font-semibold">Subtitle / Summary</label>
+              <input id="new-class-sub" type="text" placeholder="In-memory cache strategies, TTLs, and cache invalidation." class="w-full bg-[#182336] border border-slate-700 rounded-lg px-3 py-1.5 text-white mt-1"/>
+            </div>
+            <button onclick="addNewDailyClass()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-4 py-2 rounded-lg transition">
+              + Add Daily Class
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 3: DISTRACTION-FREE NOTE READER & PRACTICE ================= -->
+  <div id="note-reader-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-[#0f1726] border border-slate-700 rounded-2xl max-w-4xl w-full shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-fadeIn">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-[#121c2e]">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center font-bold">
+            📖
+          </div>
+          <div>
+            <h2 id="reader-title" class="text-lg font-bold text-white leading-tight">Note Title</h2>
+            <div class="flex items-center space-x-3 text-xs text-gray-400">
+              <span id="reader-topic-badge" class="text-teal-400 font-medium">Obsidian Note</span>
+              <span>•</span>
+              <span id="reader-path" class="truncate max-w-md">path/to/note.md</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+          <!-- View Modes -->
+          <button id="tab-note-content" class="bg-teal-600 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer">
+            Note Content
+          </button>
+          <button id="tab-note-quiz" class="bg-[#192336] hover:bg-[#22314a] text-gray-300 text-xs px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer">
+            Practice & MCQs
+          </button>
+          <button id="close-reader-modal" class="text-gray-400 hover:text-white p-1 rounded-lg ml-2 text-xl cursor-pointer">
+            ✖
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Note Content or Quiz) -->
+      <div class="p-6 overflow-y-auto flex-1 text-gray-200">
+        <!-- Markdown container -->
+        <div id="reader-markdown-container" class="markdown-body">
+          <div class="animate-pulse space-y-4">
+            <div class="h-6 bg-slate-800 rounded w-1/3"></div>
+            <div class="h-4 bg-slate-800 rounded w-full"></div>
+            <div class="h-4 bg-slate-800 rounded w-5/6"></div>
+          </div>
+        </div>
+
+        <!-- Quiz container (hidden by default) -->
+        <div id="reader-quiz-container" class="space-y-6 hidden">
+          <div class="bg-teal-950/40 border border-teal-500/30 rounded-xl p-4">
+            <h3 class="text-sm font-bold text-teal-300 mb-1">🎯 Topic Practice Quiz</h3>
+            <p class="text-xs text-gray-300">Test your mastery of this concept. Answer correctly to increase your learning streak and earn XP.</p>
+          </div>
+          <div id="quiz-questions-list" class="space-y-4"></div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-slate-800/80 bg-[#0e1625] flex items-center justify-between text-xs text-gray-400">
+        <div class="flex items-center space-x-2">
+          <span>Source:</span>
+          <code id="reader-footer-source" class="text-teal-400">D:\o.vault</code>
+        </div>
+        <button id="mark-understood-btn" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-md shadow-teal-500/20 cursor-pointer">
+          Mark as Understood (+50 XP)
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL 4: OBSIDIAN VAULT INTEGRATION ================= -->
+  <div id="vault-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-[#0f1726] border border-slate-700 rounded-2xl max-w-3xl w-full shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-[#121c2e]">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">💎</span>
+          <h2 class="text-base font-bold text-white">Obsidian Vault Integration & Live Index</h2>
+        </div>
+        <button id="close-vault-modal" class="text-gray-400 hover:text-white text-xl cursor-pointer">✖</button>
+      </div>
+      <div class="p-6 overflow-y-auto space-y-4">
+        <!-- Vault status cards -->
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-3">
+            <div class="text-[10px] text-gray-400 uppercase font-bold">Vault Status</div>
+            <div class="text-sm font-bold text-teal-400 mt-1 flex items-center justify-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-teal-400 inline-block animate-ping"></span>
+              <span>Connected</span>
+            </div>
+          </div>
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-3">
+            <div class="text-[10px] text-gray-400 uppercase font-bold">Total Notes</div>
+            <div class="text-lg font-bold text-white mt-0.5" id="vault-total-count">79 Notes</div>
+          </div>
+          <div class="bg-[#121c2c] border border-white/10 rounded-xl p-3">
+            <div class="text-[10px] text-gray-400 uppercase font-bold">Integration Mode</div>
+            <div class="text-sm font-bold text-purple-400 mt-1">Live Read-Only</div>
+          </div>
+        </div>
+
+        <div class="bg-[#090d16] border border-slate-800 rounded-xl p-3 text-xs font-mono text-gray-300">
+          <span class="text-teal-400 font-bold">Vault Path:</span> D:\o.vault\temp_unzip\PM2-Obsidian-Vault - Copy
+        </div>
+
+        <!-- Filter and note list -->
+        <div>
+          <h3 class="text-xs font-bold text-gray-300 mb-2">Vault Notes Catalog</h3>
+          <input 
+            id="vault-filter-input" 
+            type="text" 
+            placeholder="Filter vault files..." 
+            class="w-full bg-[#121c2c] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white mb-2 focus:outline-none focus:border-teal-500"
+          />
+          <div id="vault-notes-list" class="space-y-1.5 max-h-60 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 5: INTERACTIVE TERMINAL / SANDBOX ================= -->
+  <div id="sandbox-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-[#0b121e] border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden font-mono text-xs">
+      <div class="px-4 py-3 bg-[#111927] border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="flex space-x-1.5">
+            <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+          </div>
+          <span id="sandbox-title" class="text-gray-300 pl-2">Interactive Terminal Sandbox</span>
+        </div>
+        <button id="close-sandbox-modal" class="text-gray-400 hover:text-white cursor-pointer">✖</button>
+      </div>
+      <div class="p-4 bg-[#080d15] text-green-400 h-64 overflow-y-auto space-y-2" id="terminal-output">
+        <p class="text-gray-400">Early Learn Sandbox Environment v1.0 [Obsidian Linked]</p>
+        <p class="text-gray-400">Type 'help', 'notes', 'sql', 'test-api' or run commands.</p>
+        <p><span class="text-teal-400">user@earlylearn</span>:<span class="text-cyan-400">~/sandbox</span>$ ready.</p>
+      </div>
+      <div class="p-3 bg-[#0d1624] border-t border-slate-800 flex items-center space-x-2">
+        <span class="text-teal-400 font-bold">&gt;</span>
+        <input 
+          id="terminal-input" 
+          type="text" 
+          placeholder="Enter command (e.g. test-api, sql, help)..." 
+          class="flex-1 bg-transparent text-gray-200 outline-none text-xs"
+        />
+        <button id="terminal-exec-btn" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1 rounded text-[11px] cursor-pointer">
+          Run
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Frontend Logic -->
+  <script type="module" src="/js/learn.js?v=20261017_2"></script>
+</body>
+</html>

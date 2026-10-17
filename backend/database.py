@@ -1,8 +1,18 @@
+import os
+import shutil
 import sqlite3
 from pathlib import Path
 
 # Resolve path to fest.db at project root level (zenith26-fest-system/fest.db)
-DB_PATH = Path(__file__).resolve().parent.parent / "fest.db"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = ROOT_DIR / "fest.db"
+
+# On Vercel serverless functions, copy sqlite database to /tmp if needed
+if os.environ.get("VERCEL"):
+    tmp_db = Path("/tmp/fest.db")
+    if not tmp_db.exists() and DB_PATH.exists():
+        shutil.copy2(DB_PATH, tmp_db)
+    DB_PATH = tmp_db
 
 
 def get_db_connection() -> sqlite3.Connection:
@@ -46,8 +56,35 @@ def init_db() -> None:
     )
     """)
 
+    # New tables for LearnEarly LMS
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS topics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT,
+        icon TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS lecture_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+        note_path TEXT NOT NULL,
+        note_title TEXT NOT NULL
+    )
+    """)
+
     conn.commit()
     conn.close()
+
+    try:
+        from backend.lms_seed import init_lms_tables, seed_lms_data
+        init_lms_tables()
+        seed_lms_data()
+    except Exception as e:
+        print(f"LMS init notice: {e}")
 
 
 if __name__ == "__main__":
