@@ -474,8 +474,9 @@ def cancel_registration(registration_id: int):
 # Static Files & Frontend Serving (Step 4)
 # ==========================================
 
-# Mount frontend/js directory for script files
+# Mount frontend/js and frontend/css directories for script and style files
 app.mount("/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
+app.mount("/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 
 
 @app.get("/", include_in_schema=False)

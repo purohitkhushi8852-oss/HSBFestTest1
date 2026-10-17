@@ -126,6 +126,9 @@ def seed_lms_data():
     cursor = conn.cursor()
 
     vault_base = Path(r"D:\o.vault\temp_unzip\PM2-Obsidian-Vault - Copy")
+    if not vault_base.is_dir():
+        vault_base = Path(__file__).resolve().parent.parent / "data" / "vault"
+
     def find_note(name: str) -> str:
         candidates = list(vault_base.rglob(f"*{name}*"))
         return str(candidates[0]) if candidates else ""

@@ -28,6 +28,14 @@
       "dest": "frontend/css/$1"
     },
     {
+      "src": "/(learn|learn\\.html|index\\.html)?$",
+      "dest": "frontend/learn.html"
+    },
+    {
+      "src": "/admin\\.html",
+      "dest": "frontend/admin.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "api/index.py"
     }
